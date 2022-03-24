@@ -101,6 +101,12 @@ impl World {
         if self.chunks.contains_key(&chunk_pos) {
             return
         }
+        
+        for (x, y) in [(1, 0), (0, 1), (1, 1), (1, -1), (-1, 0), (0, -1), (-1, -1), (-1, 1)] {
+            if let Some(c) = self.chunks.get(&(chunk_pos.0 + x, chunk_pos.1 + y)) {
+                *c.remesh_queued.borrow_mut() = true;
+            }
+        }
         let noise = noise::OpenSimplex::new();
         let noise2 = noise::OpenSimplex::new();
         let noise3 = noise::OpenSimplex::new();

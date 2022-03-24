@@ -57,34 +57,43 @@ impl WorldMesh {
         }
     }
     pub fn create_vertex_buffer(&self, shaders: &Shaders, display: &Display, data: Array2<Cell>) -> VertexBuffer<GVert> {
-        let mut cell_data = [celldat(0.0, 0.0); CHUNK_SIZE.0 * CHUNK_SIZE.1];
-        for x in 0..CHUNK_SIZE.0 {
-            for y in 0..CHUNK_SIZE.1 {
-                let i = y * 32 + x;
+
+        let mut cell_data = [celldat(0.0, 0.0); (CHUNK_SIZE.0 + 1) * (CHUNK_SIZE.1 + 1)];
+        for x in 0..CHUNK_SIZE.0 + 1 {
+            for y in 0..CHUNK_SIZE.1 + 1 {
+                let i = y * (CHUNK_SIZE.0 + 1) + x;
                 let cell = *data.get((x, y)).unwrap();
                 cell_data[i] = celldat(cell.value, self.mat_lookup[&cell.material]);
             }
-        }
-        let cell_buffer = UniformBuffer::new(display, cell_data).unwrap();
+        }    
+        
+
+        let cell_buffer = Buffer::new(display, cell_data.as_slice(), BufferType::UniformBuffer, BufferMode::Default).unwrap();
         let vert_buffer: VertexBuffer<GVert> = VertexBuffer::empty_dynamic(display, CHUNK_SIZE.0 * CHUNK_SIZE.1 * 12).unwrap();
+       
+        
         shaders.square_march.execute(uniform! {
             Cells: &cell_buffer,
             outb: &*vert_buffer
         }, 1, 1, 1);
         vert_buffer
     }
-    pub fn update_meshes(&mut self, display: &Display, world: &World) {        
+    pub fn update_meshes(&mut self, display: &Display, shaders: &Shaders, world: &World) {   
+        let before = std::time::Instant::now();
+
         for (chunk_pos, chunk) in world.chunks.iter() {
+            if std::time::Instant::now() - before > std::time::Duration::from_millis(3) {break}
             if !*chunk.remesh_queued.borrow() {
                 continue
             }
-            *chunk.remesh_queued.borrow_mut() = false;
-            let mesh = ChunkMesh::new(*chunk_pos, world.get_mesh(*chunk_pos, &self.mat_lookup));
-            let updated_buffer = VertexBuffer::new(display, &mesh.verts).unwrap();
+            *chunk.remesh_queued.borrow_mut() = false; 
+
+            let updated_buffer = self.create_vertex_buffer(shaders, display, world.get_chunk_cell_arr(*chunk_pos));
+           
             let mut i = 0;   
             let mut replaced = false;         
             for (pos, _) in self.stored_buffers.iter_mut() {
-                if *pos == mesh.position {  
+                if *pos == *chunk_pos {  
                     replaced = true;                  
                     break;
                 }              
@@ -94,9 +103,9 @@ impl WorldMesh {
                 self.stored_buffers[i].1 = updated_buffer;
             }
             else {
-                self.stored_buffers.push((mesh.position, updated_buffer));
+                self.stored_buffers.push((*chunk_pos, updated_buffer));
             }            
-        }
+        }        
     }
     pub fn free_buffer(&mut self, chunk_pos: (i32, i32)) {
         let mut to_free = Vec::new();

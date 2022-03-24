@@ -80,17 +80,9 @@ fn main() {
     
     
     let indices = index::NoIndices(index::PrimitiveType::TrianglesList);
-    let shaders= Shaders::new(&display);
+    let shaders = Shaders::new(&display);
     // Empty buffer for testing
-    let junk_buffer = UniformBuffer::new(&display, [[0.0f32, 0.0f32]; 1024]).expect("Buffer failed to create");
     
-    let mut out: Buffer<[GVert]> = Buffer::empty_array(&display, BufferType::ShaderStorageBuffer, 12288, BufferMode::Dynamic).unwrap();
-    
-    shaders.square_march.execute(uniform!{
-        Cells: &junk_buffer,
-        outb: &out
-    }, 1, 1, 1);
-    println!("{:?}", &out.map_read()[0]);
     let target_fps = 60.0;
     let mut controller = PlayerController::new();
 
@@ -163,7 +155,7 @@ fn main() {
         let mut target = display.draw();        
         let (width, height) = display.get_framebuffer_dimensions();
         target.clear_color(0.5, 0.5,1.0, 1.0);
-        world_mesh.update_meshes(&display, &world);
+        world_mesh.update_meshes(&display, &shaders, &world);
         for (pos, buffer) in world_mesh.stored_buffers.iter() {            
             target.draw(buffer, &indices, &shaders.terrain, &uniform!{
                 resolution: (width as f32, height as f32), scale: 30f32, 

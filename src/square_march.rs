@@ -45,7 +45,6 @@ pub fn get_lines(data: [f32; 4], offset: Vec2, target: f32) -> Vec<Vec2> {
     lines
 }
 pub fn march(data: ArrayView2<Cell>, target: f32, mat_lookup: &HashMap<GroundMaterial, f32>) -> Vec<GVert> {
-    let before = std::time::Instant::now();
 
     let (n, e, s, w, nw, ne, se, sw) = (0, 1, 2, 3, 4, 5, 6, 7);
     let lookup: [Vec<usize>; 16] = [
@@ -108,6 +107,6 @@ pub fn march(data: ArrayView2<Cell>, target: f32, mat_lookup: &HashMap<GroundMat
             }            
         }   
     }
-    //println!("\n{:?}", std::time::Instant::now() - before);
+    
     mesh
 }
